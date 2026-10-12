@@ -2,7 +2,7 @@
 
 Your spam folder is a lead list someone else paid to build.
 
-Every cold email sitting in there is a sender with a **broken email infrastructure** — that's literally why it's in spam. If you sell deliverability, GTM engineering, or outbound services, those senders are pre-qualified prospects who already told you (a) they do cold outbound and (b) it isn't landing. This pipeline mines them, scores them against your ICP, builds a real deliverability audit of their domain from DNS + their own email's headers, and drafts a reverse-pitch: *"your email to me landed in spam — here's exactly why, want the full audit?"*
+Every cold email sitting in there is a sender with a **broken email infrastructure** — that's literally why it's in spam. If you sell anything to teams that do cold outbound, those senders are pre-qualified prospects who already told you (a) they do cold outbound and (b) it isn't landing. This pipeline mines them, scores them against your ICP, builds a real deliverability audit of their domain from DNS + their own email's headers, and drafts a reverse-pitch: *"your email to me landed in spam — here's exactly why, want the full audit?"*
 
 ```mermaid
 flowchart LR
@@ -13,13 +13,22 @@ flowchart LR
     E --> D([reverse-pitch<br/>drafts])
 
     I & C & A & E & D -.-> S[("Supabase<br/><sub>emails · senders · drafts</sub>")]
-
-    C -. requires .-> K[/"TYPESAFE_API_KEY"/]
-    classDef req fill:#fee2e2,stroke:#dc2626,color:#7f1d1d
-    class K req
 ```
 
 **Real first run:** 115 spam emails → 59 company domains → 19 ICP-qualified senders, each with a domain audit and a drafted pitch. Total LLM spend: about one cent.
+
+## Quick start
+
+You need Node 20.12+, a Gmail account, a free [Supabase](https://supabase.com) project, a [TypeSafe](https://typesafe.ai) API key, and [Claude Code](https://claude.com/claude-code) (or any coding agent) for the last two steps. Full setup is [below](#setup).
+
+```bash
+npm install && npm run auth          # Gmail OAuth, read-only
+npm run ingest -- --max 25           # pull a test batch of spam
+npm run classify -- --sample 10      # Jev classifies, ICP rule qualifies
+npm run audit                        # DNS + header audit of qualified domains
+```
+
+Then, in Claude Code inside this folder: `/enrich-senders`, then `/draft-reverse-pitch`. Drafts land in your Supabase, nothing sends.
 
 ---
 
@@ -27,7 +36,11 @@ flowchart LR
 
 ### 1. Ingest — `npm run ingest`
 
-Pulls everything matching `in:spam` via the Gmail API (read-only scope). For each email it stores the sender, subject, plain-text body, and the one header most people throw away: **`Authentication-Results`**. That header is Gmail's own verdict on the sender's SPF, DKIM, and DMARC — which means every prospect arrives carrying the evidence for their own audit. Idempotent on message id; `--max 25` for test batches.
+Pulls everything matching `in:spam` via the Gmail API (read-only scope). For each email it stores the sender, subject, plain-text body, and the one header most people throw away: **`Authentication-Results`**.
+
+That header is Gmail's own verdict on the sender's SPF, DKIM, and DMARC (the three DNS records receivers check to decide whether a sender is who it claims to be). Every prospect arrives carrying the evidence for their own audit.
+
+Safe to re-run: already-ingested messages are skipped. Use `--max 25` for test batches.
 
 ### 2. Classify + qualify — `npm run classify`
 
@@ -37,9 +50,13 @@ Each email gets one batched request to [Jev](https://typesafe.ai) (TypeSafe's Sy
 |---|---|---|
 | What kind of outreach is this? | Choice | `agency_service_pitch`, `cold_saas_sales`, `lead_gen_offer`, `recruiting`, `newsletter_blast`, `scam_phishing`, `other` + full probability distribution |
 | What kind of business is the sender? | Choice | `marketing_gtm_agency`, `leadgen_outbound_shop`, `b2b_saas_sales_martech`, `recruiter_staffing`, `other` |
-| Is this a genuine business, not a scam? | Noul | a single probability |
+| Is this a genuine business, not a scam? | Noul (a yes/no probability) | a single number, 0 to 1 |
 
-Emails roll up to one `senders` row per domain (freemail domains like gmail.com are excluded — you can't audit gmail.com). A sender qualifies when its business type is in your ICP set with probability ≥ 0.6 **and** legitimacy ≥ 0.5. Both thresholds live at the top of `src/classify.ts`, and the legitimacy gate is deliberately loose: enrichment acts as the second filter, and in practice scams scored 0.14–0.40 while real-but-spammy businesses scored 0.5+.
+Emails roll up to one `senders` row per domain. Freemail domains like gmail.com are excluded, because you can't audit gmail.com.
+
+A sender qualifies when its business type is in your ICP set with probability ≥ 0.6 **and** legitimacy ≥ 0.5. Both thresholds live at the top of `src/classify.ts`.
+
+The legitimacy gate is deliberately loose. Enrichment acts as the second filter, and in practice scams scored 0.14–0.40 while real-but-spammy businesses scored 0.5+.
 
 Why Jev instead of a frontier LLM? Classification here is a typed judgment, not prose. At $42 per **billion** input tokens, classifying an entire spam folder costs about a cent, roughly 200x less than the same job through a chat model.
 
@@ -56,17 +73,17 @@ Findings come out as pre-written copy fragments, e.g. *"Your DMARC policy is p=n
 
 ### 4. Enrich — signatures first, vendors last
 
-A lesson this repo paid 15 credits to learn: **cold-outbound sending domains are invisible to data vendors.** They're burner domains — `somethingflow.click`, `brandnamehub.com` — spun up weeks ago. Email→LinkedIn lookups returned 0 hits on 15 attempts.
+A lesson this repo paid 15 vendor lookups to learn: **cold-outbound sending domains are invisible to data vendors.** They're burner domains — `somethingflow.click`, `brandnamehub.com` — spun up weeks ago. Email→LinkedIn lookups returned 0 hits on 15 attempts.
 
 The free path works better: the **email signature** usually names the real company and person, because the pitch has to be signed by someone. Extraction order:
 
 1. Parse the real company/person out of the email body and signature (free)
-2. Reply-to-sender is always valid — they emailed you, and they monitor replies; that's the whole point of their campaign (free)
+2. Replying to the sender always works: they emailed you, and they monitor replies, that's the whole point of their campaign (free)
 3. Paid decision-maker lookup only for confirmed real companies where a more senior contact beats answering the SDR (1–3 credits each)
 
 ### 5. Draft — the reverse-pitch
 
-Drafts land in the `drafts` table (`draft` → `approved` → `sent`), written to a cold-email framework: under 90 words, give-first, one interest-based CTA, no links, sentence case like a person typing. Two example angles ship in the `draft-reverse-pitch` skill. **They are examples, not the pitch.** Write your own bridge line, or your own angle; the audit finding is the only part that has to stay factual.
+Drafts land in the `drafts` table (`draft` → `approved` → `sent`), written to a cold-email framework: under 90 words, give-first, one interest-based CTA, no links, sentence case like a person typing. Two example angles ship in the `draft-reverse-pitch` skill. **They are examples, not the pitch.** Write your own line about what you sell, or your own angle; the audit finding is the only part that has to stay factual.
 
 **Angle A, the observation:**
 
@@ -126,7 +143,7 @@ Plus a `drafts` row with subject + body, waiting for review.
 
 ## Setup
 
-You need Node 20.12+, a Gmail account, a free [Supabase](https://supabase.com) project, and a [TypeSafe](https://typesafe.ai) API key.
+You need Node 20.12+, a Gmail account, a free [Supabase](https://supabase.com) project, a [TypeSafe](https://typesafe.ai) API key, and Claude Code or another coding agent for the enrich and draft steps.
 
 1. **Google OAuth** — In [Google Cloud Console](https://console.cloud.google.com): create a project, enable the **Gmail API**, create an **OAuth client ID → Desktop app** (not Web application — the JSON must have an `installed` key), add yourself as a test user on the consent screen, download the JSON as `credentials.json` into this folder. Then:
    ```bash
@@ -146,15 +163,16 @@ npm run audit -- --domain acme.com --force   # re-audit one domain
 npm test                         # parse-layer unit checks
 ```
 
-Enrichment and drafting are agent passes, not scripts: they read bodies, judge signatures, and write copy. The repo ships both as project skills, so any coding agent that reads `AGENTS.md` (Claude Code reads it through `CLAUDE.md`) can run them:
+Enrichment and drafting are agent passes, not scripts: they read bodies, judge signatures, and write copy. Open the folder in Claude Code and run:
 
 ```bash
-# in Claude Code, inside this folder
 /enrich-senders          # real company + person from each email signature; vendor lookup optional
 /draft-reverse-pitch     # 3 samples for your approval, then the batch, into the drafts table
 ```
 
-Before drafting, fill in the **Your pitch** block in `AGENTS.md` (your name, company, what you do, what you give). The agent reads and writes rows through `npm run rows`, so no database tool or MCP server is needed.
+Using a different agent? The same instructions are in `AGENTS.md`.
+
+Before drafting, fill in the **Your pitch** block in `AGENTS.md` (your name, company, what you do, what you give), or put the same four lines in a gitignored `PITCH.local.md`. The agent reads and writes rows through `npm run rows`, so no database tool or MCP server is needed.
 
 Tune who qualifies at the top of `src/classify.ts`: the ICP business types, `MIN_TYPE_PROB`, and `MIN_LEGIT`.
 
