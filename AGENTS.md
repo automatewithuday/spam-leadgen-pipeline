@@ -29,10 +29,12 @@ If a value looks wrong, say so with evidence and wait for a decision.
 
 ## Your pitch (operator fills in before drafting)
 
+Fill this block, or put the same four lines in `PITCH.local.md` (gitignored) to keep your pitch out of version control.
+
 ```
 YOUR_NAME:        
 YOUR_COMPANY:     
-WHAT_YOU_DO:      one plain sentence, in the prospect's words, e.g. "we run outbound for b2b agencies"
+WHAT_YOU_DO:      one plain sentence, in the prospect's words, e.g. "we run outbound for B2B agencies"
 THE_GIVE:         what you hand over on a yes, e.g. "a short teardown of what is tripping their sends and the fix order"
 ```
 

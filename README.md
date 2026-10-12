@@ -66,17 +66,31 @@ The free path works better: the **email signature** usually names the real compa
 
 ### 5. Draft — the reverse-pitch
 
-Drafts land in the `drafts` table (`draft` → `approved` → `sent`), written to a cold-email framework: under 90 words, give-first, one interest-based CTA, no links, lowercase internal-note subject. The shape:
+Drafts land in the `drafts` table (`draft` → `approved` → `sent`), written to a cold-email framework: under 90 words, give-first, one interest-based CTA, no links, sentence case like a person typing. Two example angles ship in the `draft-reverse-pitch` skill. **They are examples, not the pitch.** Write your own bridge line, or your own angle; the audit finding is the only part that has to stay factual.
 
-> **subject:** your dkim
+**Angle A, the observation:**
+
+> **Subject:** Acme Outbound + spam
 >
-> {name}, your {their pitch, referenced specifically} reached me, in the spam folder.
+> Jo, your note about appointment setting for SaaS teams reached me, in the spam folder.
 >
-> took a look at why: {one concrete audit finding about their domain, in plain words}.
+> Took a look at why: Acme Outbound's sending domain has DMARC set to p=none, so Gmail scores it as unprotected. If it tripped my inbox, it is tripping most of the list.
 >
-> i run {your co}, {what you do, one plain sentence}. put together a short teardown of what is tripping {company}'s sends and the fix order.
+> I run Northline, we build the outbound systems agencies run for their clients. Put together a short teardown of what is hurting your sends and the fix order.
 >
-> want me to send it over?
+> Want me to send it over?
+
+**Angle B, the live demo:**
+
+> **Subject:** Your email, reverse engineered
+>
+> Jo, your pitch landed in my spam folder. A pipeline I built pulled it out, read the headers, checked Acme Outbound's DNS, and wrote this reply. Cost: under a cent.
+>
+> The one thing it flagged: the email you sent on 24 Sep failed DKIM, which Gmail treats as a direct spam signal.
+>
+> That pipeline is the kind of thing Northline builds, we put AI systems behind GTM teams. Happy to share the full teardown of your domain.
+>
+> Want to see what else it found?
 
 The hook writes itself because every claim is verifiable by the prospect in 30 seconds: it's their domain, their DNS, their email. The audit is the give that opens the door; the credibility line says what you actually sell.
 

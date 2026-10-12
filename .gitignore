@@ -5,3 +5,4 @@ token.json
 *credentials*.json
 *client_secret*.json
 .claude/settings.local.json
+PITCH.local.md
