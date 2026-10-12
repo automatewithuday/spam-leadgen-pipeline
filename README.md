@@ -74,11 +74,11 @@ Drafts land in the `drafts` table (`draft` → `approved` → `sent`), written t
 >
 > took a look at why: {one concrete audit finding about their domain, in plain words}.
 >
-> i run {your co}, we fix sending infrastructure for gtm teams. put together a short teardown of what is tripping {company}'s sends and the fix order.
+> i run {your co}, {what you do, one plain sentence}. put together a short teardown of what is tripping {company}'s sends and the fix order.
 >
 > want me to send it over?
 
-The hook writes itself because every claim is verifiable by the prospect in 30 seconds: it's their domain, their DNS, their email.
+The hook writes itself because every claim is verifiable by the prospect in 30 seconds: it's their domain, their DNS, their email. The audit is the give that opens the door; the credibility line says what you actually sell.
 
 ---
 
@@ -112,7 +112,7 @@ Plus a `drafts` row with subject + body, waiting for review.
 
 ## Setup
 
-You need Node 20+, a Gmail account, a free [Supabase](https://supabase.com) project, and a [TypeSafe](https://typesafe.ai) API key.
+You need Node 20.12+, a Gmail account, a free [Supabase](https://supabase.com) project, and a [TypeSafe](https://typesafe.ai) API key.
 
 1. **Google OAuth** — In [Google Cloud Console](https://console.cloud.google.com): create a project, enable the **Gmail API**, create an **OAuth client ID → Desktop app** (not Web application — the JSON must have an `installed` key), add yourself as a test user on the consent screen, download the JSON as `credentials.json` into this folder. Then:
    ```bash
@@ -132,7 +132,15 @@ npm run audit -- --domain acme.com --force   # re-audit one domain
 npm test                         # parse-layer unit checks
 ```
 
-Enrichment and drafting run as Claude Code passes over the Supabase tables (scripts can't call MCP tools) — ask Claude to "enrich qualified senders" / "draft reverse-pitch emails per the b2b-cold-email-copywriting skill".
+Enrichment and drafting are agent passes, not scripts: they read bodies, judge signatures, and write copy. The repo ships both as project skills, so any coding agent that reads `AGENTS.md` (Claude Code reads it through `CLAUDE.md`) can run them:
+
+```bash
+# in Claude Code, inside this folder
+/enrich-senders          # real company + person from each email signature; vendor lookup optional
+/draft-reverse-pitch     # 3 samples for your approval, then the batch, into the drafts table
+```
+
+Before drafting, fill in the **Your pitch** block in `AGENTS.md` (your name, company, what you do, what you give). The agent reads and writes rows through `npm run rows`, so no database tool or MCP server is needed.
 
 Tune who qualifies at the top of `src/classify.ts`: the ICP business types, `MIN_TYPE_PROB`, and `MIN_LEGIT`.
 

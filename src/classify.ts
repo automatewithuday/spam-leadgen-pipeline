@@ -2,10 +2,10 @@
 import { TypeSafeClient, choice, noul } from "@typesafe-ai/sdk";
 import { supabase, FREEMAIL, flag } from "./lib.js";
 
-// ── Qualification rule — Uday owns these values (approved in plan) ──────────
+// ── Qualification rule — operator-owned values: agents propose, humans change ──
 const ICP_TYPES = new Set(["marketing_gtm_agency", "leadgen_outbound_shop", "b2b_saas_sales_martech"]);
 const MIN_TYPE_PROB = 0.6;
-const MIN_LEGIT = 0.5; // pre-enrichment gate; GetLeads enrichment is the second filter
+const MIN_LEGIT = 0.5; // loose on purpose: enrichment is the second filter
 // ─────────────────────────────────────────────────────────────────────────────
 
 const SAMPLE = Number(flag("sample") ?? Infinity);

@@ -8,7 +8,8 @@
     "ingest": "tsx src/ingest.ts",
     "classify": "tsx src/classify.ts",
     "audit": "tsx src/audit.ts",
-    "test": "tsx src/parse.test.ts"
+    "test": "tsx src/parse.test.ts",
+    "rows": "tsx src/rows.ts"
   },
   "dependencies": {
     "@google-cloud/local-auth": "^3.0.1",
@@ -20,5 +21,8 @@
     "@types/node": "^26.6.3",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2"
+  },
+  "engines": {
+    "node": ">=20.12"
   }
 }
